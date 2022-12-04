@@ -1,0 +1,8 @@
+fastapi
+easyocr
+uvicorn
+pandas
+numpy
+python-multipart
+Pillow
+opencv-python==4.5.5.64
