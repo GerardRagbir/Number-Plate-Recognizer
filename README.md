@@ -1,4 +1,4 @@
-# Number_Plate_Recognizer
+# Number Plate Recognizer
 
 A repo for UTT Mechatronics' students to use with their robot.
 
