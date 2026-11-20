@@ -1,0 +1,39 @@
+[project]
+name = "iris"
+version = "1.0.0"
+description = "Apple-silicon native number plate recognition, vehicle tracking and cross-camera analysis"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "numpy>=2.3",
+    "scipy>=1.16",
+    "opencv-python-headless>=4.12",
+    "fastapi>=0.120",
+    "uvicorn[standard]>=0.38",
+    "python-multipart>=0.0.20",
+    "av>=16",
+    "onnxruntime>=1.23",
+    "open-image-models>=0.5",
+    "pyobjc-core>=12",
+    "pyobjc-framework-Cocoa>=12",
+    "pyobjc-framework-Quartz>=12",
+    "pyobjc-framework-CoreMedia>=12",
+    "pyobjc-framework-CoreML>=12",
+    "pyobjc-framework-Vision>=12",
+    "pyobjc-framework-AVFoundation>=12",
+    "pyobjc-framework-ScreenCaptureKit>=12",
+    "pyobjc-framework-Metal>=12",
+    "pyobjc-framework-libdispatch>=12",
+]
+
+[dependency-groups]
+dev = ["pytest>=8", "httpx>=0.28"]
+
+[tool.uv]
+# Run in place (`uv run python -m npr …`) instead of installing the project: an editable install relies
+# on a .pth file, which macOS kept flagging "hidden" in this folder, and Python then ignores it.
+package = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
