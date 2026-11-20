@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Iris</title>
+  <link rel="stylesheet" href="/static/vendor/leaflet/leaflet.css">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="bar">
+    <div class="bar-left">
+    <button class="ghost" id="toggle-rail" aria-controls="rail" aria-expanded="false" data-icon="cameras" data-key="[" data-tip="Slide the camera list in or out.">Cameras <span class="count" id="rail-count"></span></button>
+    <div class="group" id="views" role="radiogroup" aria-label="View">
+      <button data-view="wall" data-icon="live" data-key="W" data-tip="Camera tiles with vehicles and plates drawn on.">Live</button>
+      <button data-view="map" data-icon="map" data-key="M" data-tip="Cameras, their view cones and vehicle routes.">Map</button>
+      <button data-view="network" data-icon="health" data-key="N" data-tip="Connection heartbeats and the connection test.">Health</button>
+      <button data-view="config" data-icon="settings" data-key="C" data-tip="Every camera and general option, as lists.">Settings</button>
+      <button data-view="home" data-icon="guide" data-key="G" data-tip="What the app can do and what to set up next.">Guide</button>
+    </div>
+
+    <div class="group wall-only" id="pager" role="tablist" aria-label="Wall pages" hidden></div>
+    </div>
+    <div class="brand" aria-label="Iris"><span class="brand-mark" aria-hidden="true"></span>Iris</div>
+    <div class="bar-right">
+    <div class="chip" id="sys" title="Inference hardware">—</div>
+    <div class="clock" id="clock"></div>
+    <button class="ghost" id="toggle-side" aria-controls="side" aria-expanded="false" data-icon="activity" data-key="]" data-tip="Plates read, vehicles seen and movement patterns.">Activity</button>
+    </div>
+  </header>
+
+  <main class="shell">
+    <aside class="rail drawer" id="rail" aria-label="Cameras">
+      <h2>Cameras <span class="count" id="source-count"></span>
+        <button class="ghost" id="group-add" data-icon="group" data-tip="Make a group, then drag cameras onto it.">New group</button>
+        <button class="ghost drawer-x" data-close="rail" aria-label="Close camera list" title="Close (Esc)">✕</button></h2>
+      <div id="sources" class="sources"></div>
+      <p class="hint" id="sources-empty">No cameras yet. Add one under Settings.</p>
+    </aside>
+    <div class="splitter" id="split-rail" role="separator" aria-orientation="vertical" aria-label="Resize camera list" tabindex="0" title="Drag to resize · double-click to reset"></div>
+
+    <section class="center">
+      <div class="view scroll" id="view-home" hidden></div>
+
+      <div class="grid" id="grid" data-layout="2" hidden></div>
+      <div class="dock" id="dock" role="toolbar" aria-label="What is drawn on the video">
+        <div class="group" id="layers">
+          <button data-layer="masks" class="on" data-icon="masks" data-tip="Shade each vehicle's outline.">Masks</button>
+          <button data-layer="boxes" class="on" data-icon="boxes" data-tip="Draw a box around each vehicle.">Boxes</button>
+          <button data-layer="trails" class="on" data-icon="trails" data-tip="Show where each vehicle has been.">Paths</button>
+          <button data-layer="plates" class="on" data-icon="plates" data-tip="Outline plates and show what was read.">Plates</button>
+          <button data-layer="labels" class="on" data-icon="labels" data-tip="Tag each vehicle with its number and type.">Labels</button>
+        </div>
+      </div>
+
+      <div class="view" id="view-map" hidden>
+        <div id="map"></div>
+        <div class="map-tools">
+          <button id="map-fit" data-icon="fit" data-tip="Zoom so every placed camera is in view.">Fit cameras</button>
+          <button id="map-flows" class="on" data-icon="flows" data-tip="Show measured movement between cameras.">Flows</button>
+        </div>
+        <div class="map-unplaced" id="map-unplaced" hidden></div>
+        <div class="map-banner" id="map-banner" hidden></div>
+        <div class="inspector" id="inspector" hidden></div>
+      </div>
+
+      <div class="view scroll" id="view-network" hidden>
+        <div class="view-head">
+          <h2>Connections</h2>
+          <div class="group" id="net-window" role="radiogroup" aria-label="Time range">
+            <button data-window="120">2 min</button>
+            <button data-window="300" class="on">5 min</button>
+            <button data-window="900">15 min</button>
+          </div>
+          <div class="spacer"></div>
+          <form class="row" id="net-adhoc">
+            <input type="text" id="net-url" placeholder="Test any address: rtsp://user:pass@camera/stream" spellcheck="false" autocomplete="off">
+            <button class="primary">Test</button>
+          </form>
+        </div>
+        <div id="net-adhoc-result"></div>
+        <div id="net-cards" class="net-cards"></div>
+        <p class="hint pad" id="net-empty" hidden>No sources yet. Add one, or test an address above before adding it.</p>
+      </div>
+
+      <div class="view" id="view-review" hidden>
+        <header class="rv-head">
+          <button id="rv-back" data-icon="back" data-tip="Leave the review. Results are kept.">Back</button>
+          <h2 id="rv-title"></h2><span class="badge" id="rv-phase"></span>
+          <div class="spacer"></div>
+          <select id="rv-pick" aria-label="Recording to review" hidden></select>
+          <button id="rv-boxes" class="on" data-icon="boxes" data-tip="Draw what was found on the video.">Boxes</button>
+          <button id="rv-loop" class="on" data-icon="loop" data-tip="Start again when the video ends.">Loop</button>
+        </header>
+        <div class="rv-main">
+          <div class="rv-player"><video id="rv-video" controls muted playsinline preload="auto"></video><canvas id="rv-overlay"></canvas>
+            <p class="rv-novideo" id="rv-novideo" hidden>This file cannot be played in the browser (a photo, or a video format the browser does not support). The timeline below still works.</p></div>
+          <aside class="rv-info" id="rv-info"></aside>
+        </div>
+        <div class="rv-timeline" id="rv-timeline"></div>
+        <section class="rv-graph" id="rv-graph" hidden></section>
+      </div>
+
+      <div class="view scroll" id="view-config" hidden>
+        <div class="view-head">
+          <h2>Settings</h2>
+          <div class="group" id="config-tabs" role="radiogroup" aria-label="Settings section">
+            <button data-ctab="cameras" class="on">Cameras</button>
+            <button data-ctab="groups">Groups</button>
+            <button data-ctab="layout">Layout</button>
+            <button data-ctab="general">General</button>
+          </div>
+          <div class="spacer"></div>
+          <button id="config-guided" data-icon="wand" data-tip="Three questions instead of every field.">Guided setup</button>
+          <button class="primary" id="config-add" data-icon="add" data-tip="Guided: connect, place on the map, name.">Add camera</button>
+        </div>
+        <div id="config-cameras">
+          <section class="card flush" id="config-list"></section>
+          <section class="card" id="config-camera"></section>
+        </div>
+        <div id="config-groups" hidden>
+          <section class="card flush" id="config-grouplist"></section>
+          <section class="card narrow" id="config-group" hidden></section>
+        </div>
+        <div id="config-layout" hidden>
+          <section class="card" id="config-wall"></section>
+        </div>
+        <div id="config-general" hidden>
+          <section class="card narrow" id="config-global"></section>
+        </div>
+      </div>
+    </section>
+
+    <div class="splitter" id="split-side" role="separator" aria-orientation="vertical" aria-label="Resize activity panel" tabindex="0" title="Drag to resize · double-click to reset"></div>
+    <aside class="side drawer" id="side" aria-label="Activity">
+      <div class="act-head">
+        <div class="searchbar" id="searchbar" role="search">
+          <button type="button" class="sb-btn" id="act-mode" aria-haspopup="true" aria-label="What to show"></button>
+          <div class="sb-field" id="sb-field"><span id="sb-chips"></span><input id="search" type="text" placeholder="Plate, colour, type…" autocomplete="off" spellcheck="false" aria-label="Search activity"></div>
+          <button type="button" class="sb-btn" id="act-filter" aria-haspopup="true" aria-label="Sort and time"></button>
+        </div>
+        <button class="ghost drawer-x" data-close="side" aria-label="Close activity panel" title="Close (Esc)">✕</button>
+        <div class="pop" id="act-pop" hidden></div>
+      </div>
+      <div class="act-summary" id="act-summary"></div>
+      <div class="panel" id="act-list"></div>
+    </aside>
+  </main>
+
+  <dialog id="wiz" class="wizard">
+    <form method="dialog" class="dlg-head">
+      <h3 id="wiz-title"></h3>
+      <button class="ghost" value="cancel" aria-label="Close">✕</button>
+    </form>
+    <ol class="stepper" id="wiz-steps"></ol>
+    <div class="wiz-body" id="wiz-body"></div>
+    <p class="error" id="wiz-error" hidden></p>
+    <footer class="wiz-foot" id="wiz-foot">
+      <button id="wiz-back">Back</button>
+      <span class="spacer"></span>
+      <button class="ghost" id="wiz-skip" hidden></button>
+      <button class="primary" id="wiz-next">Next</button>
+    </footer>
+  </dialog>
+
+  <div class="toasts" id="toasts"></div>
+
+  <script src="/static/vendor/leaflet/leaflet.js"></script>
+  <script type="module" src="/static/app.js"></script>
+</body>
+</html>
